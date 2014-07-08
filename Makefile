@@ -24,7 +24,7 @@ deps/swift/config.py: deps/swift
 	vim deps/swift/config.py
 
 deps/swift/Sluift/dll/sluift.so: deps/swift | deps/swift/config.py
-	cd deps/swift;scons Sluift
+	cd deps/swift;./scons Sluift
 
 ${LUA_MODULE_PATH}/sluift.so: deps/swift/Sluift/dll/sluift.so
 	mkdir -p ${LUA_MODULE_PATH}
