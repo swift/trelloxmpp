@@ -20,7 +20,7 @@ trello_oauth_key = os.getenv("TRELLO_KEY")
 trello_oauth_token = os.getenv("TRELLO_TOKEN")
 trello_board = os.getenv("TRELLO_BOARD")
 polling_time = 60
-polling_time = 10
+--polling_time = 10
 
 sluift.debug = true
 
