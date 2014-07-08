@@ -27,13 +27,32 @@ sluift.debug = true
 xmpp = sluift.new_client(xmpp_jid, xmpp_pass)
 
 
-
 function sleep(seconds)
-	i = 0
+	local i = 0
 	while i < seconds do
 		socket.select(nil, nil, 1)  -- Just so C-c responds more quickly
 		i = i + 1
 	end
+end
+
+function query_board(board, command, parameters)
+	parameters = parameters or {}
+	parameters.key = trello_oauth_key
+	if trello_oauth_token and trello_oauth_token ~= '' then
+		parameters.token = trello_oauth_token
+	end
+	local url_parameters = {}
+	for key, value in pairs(parameters) do
+		if type(key) == 'number' then
+			url_parameters[#url_parameters+1] = value
+		else
+			url_parameters[#url_parameters+1] = key .. '=' .. value
+		end
+	end
+	local url = 'https://api.trello.com/1/board/' .. board .. '/' .. command .. '?' .. table.concat(url_parameters, "&")
+	local content, code, headers = ssl.https.request(url)
+	if content == "" then return {} end
+	return json.decode(content)
 end
 
 function form_message(event)
@@ -62,42 +81,29 @@ function form_message(event)
 	return message
 end
 
-
 xmpp:connect(function ()
 	xmpp:send_presence{to = muc_jid}
 	print("Connected")
+	local last_activity = query_board(trello_board, 'dateLastActivity')['_value']
 	local first = true
-	local newest = ''
 	while true do
-		local boardURL = 'https://api.trello.com/1/board/'..trello_board..'/actions?key='..trello_oauth_key
-		if trello_oauth_token and trello_oauth_token ~= '' then
-				boardURL = boardURL..'&token='..trello_oauth_token
-		end
-		content, code, headers = ssl.https.request(boardURL)
-		if content ~= "" then
-			local data = json.decode(content)
-			newNewest = newest
-			for _, item in pairs(data) do
-				local date = item['date']
-				if date > newest then
-					if date > newNewest then
-						newNewest = date
-					end
-					if not first then
-						print("Found new data: ")
-						sluift.tprint(item)
-						local message = form_message(item)
-						if message then
-							print(message)
-							xmpp:send_message{to=muc_room, body=message, type='groupchat'}
-						end
+		local actions = query_board(trello_board, 'actions', {filter = 'createCard,updateCard,commentCard', since = last_activity})
+		table.sort(actions, function(a, b) return a['date'] < b['date'] end)
+		for _, item in pairs(actions) do
+			if item['date'] > last_activity then
+				if not first then
+					print("Found new data: ")
+					sluift.tprint(item)
+					local message = form_message(item)
+					if message then
+						print(message)
+						xmpp:send_message{to=muc_room, body=message, type='groupchat'}
 					end
 				end
+				last_activity = item['date']
 			end
-			newest = newNewest
-			first = false
-			olddata = data
 		end
+		first = false
 		sleep(polling_time)
 	end
 end)
