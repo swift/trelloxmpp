@@ -27,10 +27,12 @@ sluift.debug = true
 xmpp = sluift.new_client(xmpp_jid, xmpp_pass)
 
 
-function sleep(seconds)
+function sleep(seconds, client)
 	local i = 0
 	while i < seconds do
-		socket.select(nil, nil, 1)  -- Just so C-c responds more quickly
+		for message in client:messages({timeout = 1000}) do end 
+		-- clear out the queue so Swiften responds underneath us
+		-- do it in one-second intervals so that we can quickly respond to C-c
 		i = i + 1
 	end
 end
@@ -104,6 +106,6 @@ xmpp:connect(function ()
 			end
 		end
 		first = false
-		sleep(polling_time)
+		sleep(polling_time, xmpp)
 	end
 end)
