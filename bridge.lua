@@ -30,7 +30,7 @@ xmpp = sluift.new_client(xmpp_jid, xmpp_pass)
 function sleep(seconds, client)
 	local i = 0
 	while i < seconds do
-		for message in client:messages({timeout = 1000}) do end 
+		for message in client:messages({timeout = 1000}) do end
 		-- clear out the queue so Swiften responds underneath us
 		-- do it in one-second intervals so that we can quickly respond to C-c
 		i = i + 1
@@ -53,7 +53,7 @@ function query_board(board, command, parameters)
 	end
 	local url = 'https://api.trello.com/1/board/' .. board .. '/' .. command .. '?' .. table.concat(url_parameters, "&")
 	local content, code, headers = ssl.https.request(url)
-	if content == "" then return {} end
+	if not content or content == "" then return {} end
 	return json.decode(content)
 end
 
